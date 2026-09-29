@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api";
+const API_URL = "https://authentication-product-crud-1.onrender.com/api";
 
 export async function getProducts() {
     const response = await fetch(`${API_URL}/products`);
