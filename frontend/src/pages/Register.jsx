@@ -1,693 +1,493 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import { getProducts, deleteProduct } from "../services/productService";
-import { useAuth } from "../context/AuthContext";
+import { registerUser } from "../services/authService";
 
-function Products() {
+function Register() {
     const navigate = useNavigate();
 
-    const {
-        user,
-        accessToken,
-        refreshToken,
-        logout,
-    } = useAuth();
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+    });
 
-    const [products, setProducts] = useState([]);
-    const [search, setSearch] = useState("");
-    const [category, setCategory] = useState("All");
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        async function fetchProducts() {
-            try {
-                setError("");
+    function handleChange(event) {
+        const { name, value } = event.target;
 
-                const data = await getProducts();
+        setFormData((previousData) => ({
+            ...previousData,
+            [name]: value,
+        }));
+    }
 
-                setProducts(data.products || []);
-            } catch (error) {
-                setError(error.message);
-            } finally {
-                setLoading(false);
-            }
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        setError("");
+        setLoading(true);
+
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords do not match.");
+            setLoading(false);
+            return;
         }
-
-        fetchProducts();
-    }, []);
-
-    const categories = useMemo(() => {
-        const uniqueCategories = [
-            ...new Set(
-                products.map((product) => product.category)
-            ),
-        ];
-
-        return ["All", ...uniqueCategories];
-    }, [products]);
-
-    const filteredProducts = useMemo(() => {
-        return products.filter((product) => {
-            const searchText = search.toLowerCase();
-
-            const matchesSearch =
-                product.name
-                    .toLowerCase()
-                    .includes(searchText) ||
-                product.category
-                    .toLowerCase()
-                    .includes(searchText);
-
-            const matchesCategory =
-                category === "All" ||
-                product.category === category;
-
-            return matchesSearch && matchesCategory;
-        });
-    }, [products, search, category]);
-
-    const totalStock = products.reduce(
-        (total, product) =>
-            total + Number(product.stock),
-        0
-    );
-
-    const inventoryValue = products.reduce(
-        (total, product) =>
-            total +
-            Number(product.price) *
-                Number(product.stock),
-        0
-    );
-
-    async function handleDelete(productId) {
-        const confirmDelete = window.confirm(
-            "Are you sure you want to delete this product?"
-        );
-
-        if (!confirmDelete) return;
 
         try {
-            setError("");
+            await registerUser(formData);
 
-            await deleteProduct(
-                productId,
-                accessToken,
-                refreshToken
-            );
-
-            setProducts((previousProducts) =>
-                previousProducts.filter(
-                    (product) =>
-                        product._id !== productId
-                )
-            );
+            navigate("/");
         } catch (error) {
             setError(error.message);
+        } finally {
+            setLoading(false);
         }
-    }
-
-    async function handleLogout() {
-        await logout();
-        navigate("/");
-    }
-
-    function getStockStatus(stock) {
-        if (stock === 0) {
-            return {
-                label: "Out of stock",
-                className: "stock-danger",
-            };
-        }
-
-        if (stock <= 10) {
-            return {
-                label: "Low stock",
-                className: "stock-warning",
-            };
-        }
-
-        return {
-            label: "In stock",
-            className: "stock-success",
-        };
     }
 
     return (
-        <div className="shop-dashboard">
+        <main className="register-page">
 
-            {/* ================= NAVBAR ================= */}
+            {/* ================= DECORATIONS ================= */}
 
-            <nav className="shop-navbar">
+            <div className="register-decoration register-decoration-one"></div>
+            <div className="register-decoration register-decoration-two"></div>
+            <div className="register-decoration register-decoration-three"></div>
 
-                <div className="navbar-left">
+            <section className="register-shell">
 
-                    <div
-                        className="shop-logo"
-                        onClick={() => navigate("/products")}
-                    >
-                        <span>S</span>
+                {/* ================= LEFT VISUAL ================= */}
 
-                        <div>
-                            <strong>SkyShop</strong>
-                            <small>PRODUCT MANAGEMENT</small>
-                        </div>
-                    </div>
+                <div className="register-visual">
 
-                    <div className="navbar-links">
+                    <div className="register-visual-content">
 
-                        <button
-                            className="navbar-link active"
-                            onClick={() =>
-                                navigate("/products")
-                            }
-                        >
-                            Products
-                        </button>
+                        {/* BRAND */}
 
-                        <button
-                            className="navbar-link"
-                            onClick={() =>
-                                navigate("/products/new")
-                            }
-                        >
-                            Add Product
-                        </button>
+                        <div className="register-brand">
 
-                    </div>
+                            <div className="register-logo-mark">
+                                S
+                            </div>
 
-                </div>
+                            <div>
+                                <h1>SkyShop</h1>
+                                <span>
+                                    PRODUCT MANAGEMENT
+                                </span>
+                            </div>
 
-                <div className="navbar-right">
-
-                    <div className="navbar-user">
-
-                        <div className="navbar-avatar">
-                            {user?.name
-                                ?.charAt(0)
-                                ?.toUpperCase() || "U"}
                         </div>
 
-                        <div className="navbar-user-info">
-                            <strong>
-                                {user?.name || "User"}
-                            </strong>
+                        {/* TEXT */}
 
-                            <span>
-                                {user?.email || "Account"}
+                        <div className="register-visual-text">
+
+                            <span className="register-label">
+                                BUILD YOUR STORE.
                             </span>
-                        </div>
 
-                    </div>
-
-                    <div className="navbar-divider"></div>
-
-                    <button
-                        className="navbar-logout"
-                        onClick={handleLogout}
-                    >
-                        <span>↪</span>
-                        Logout
-                    </button>
-
-                </div>
-
-            </nav>
-
-            {/* ================= MAIN ================= */}
-
-            <main className="shop-main">
-
-                {/* HERO */}
-
-                <section className="dashboard-intro">
-
-                    <div>
-                        <p className="intro-label">
-                            INVENTORY OVERVIEW
-                        </p>
-
-                        <h1>
-                            Manage your products.
-                        </h1>
-
-                        <p className="intro-text">
-                            Keep your catalog organized,
-                            monitor inventory and manage
-                            every product from one place.
-                        </p>
-                    </div>
-
-                    <button
-                        className="primary-add-button"
-                        onClick={() =>
-                            navigate("/products/new")
-                        }
-                    >
-                        <span>＋</span>
-                        Add New Product
-                    </button>
-
-                </section>
-
-                {/* ================= STATS ================= */}
-
-                <section className="stats-grid">
-
-                    <div className="stat-card">
-
-                        <div className="stat-top">
-                            <span>Total Products</span>
-
-                            <div className="stat-symbol">
-                                ▦
-                            </div>
-                        </div>
-
-                        <strong>
-                            {products.length}
-                        </strong>
-
-                        <small>
-                            Products in catalog
-                        </small>
-
-                    </div>
-
-                    <div className="stat-card">
-
-                        <div className="stat-top">
-                            <span>Categories</span>
-
-                            <div className="stat-symbol purple">
-                                ◈
-                            </div>
-                        </div>
-
-                        <strong>
-                            {Math.max(
-                                categories.length - 1,
-                                0
-                            )}
-                        </strong>
-
-                        <small>
-                            Active categories
-                        </small>
-
-                    </div>
-
-                    <div className="stat-card">
-
-                        <div className="stat-top">
-                            <span>Total Stock</span>
-
-                            <div className="stat-symbol orange">
-                                ↗
-                            </div>
-                        </div>
-
-                        <strong>
-                            {totalStock}
-                        </strong>
-
-                        <small>
-                            Units available
-                        </small>
-
-                    </div>
-
-                    <div className="stat-card">
-
-                        <div className="stat-top">
-                            <span>Inventory Value</span>
-
-                            <div className="stat-symbol pink">
-                                ₹
-                            </div>
-                        </div>
-
-                        <strong>
-                            ₹
-                            {inventoryValue.toLocaleString(
-                                "en-IN"
-                            )}
-                        </strong>
-
-                        <small>
-                            Current stock value
-                        </small>
-
-                    </div>
-
-                </section>
-
-                {/* ================= PRODUCT PANEL ================= */}
-
-                <section className="inventory-panel">
-
-                    <div className="inventory-header">
-
-                        <div>
                             <h2>
-                                Product inventory
+                                Start managing
+                                <br />
+                                your products
+                                <br />
+                                <span>smarter.</span>
                             </h2>
 
                             <p>
-                                {filteredProducts.length}{" "}
-                                products displayed
+                                Create your account and get
+                                everything you need to organize
+                                your products and inventory in
+                                one beautiful workspace.
                             </p>
+
                         </div>
 
-                        <div className="inventory-controls">
+                        {/* ILLUSTRATION */}
 
-                            <div className="product-search">
+                        <div className="register-illustration">
 
-                                <span>⌕</span>
+                            <div className="register-circle circle-one"></div>
+                            <div className="register-circle circle-two"></div>
+                            <div className="register-circle circle-three"></div>
 
-                                <input
-                                    type="text"
-                                    placeholder="Search products..."
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(
-                                            event.target.value
-                                        )
-                                    }
-                                />
+                            <div className="register-dashboard">
+
+                                <div className="dashboard-top">
+
+                                    <span>
+                                        SKYSHOP
+                                    </span>
+
+                                    <div className="dashboard-dots">
+                                        <i></i>
+                                        <i></i>
+                                        <i></i>
+                                    </div>
+
+                                </div>
+
+                                <div className="dashboard-content">
+
+                                    <div className="dashboard-sidebar">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+
+                                    <div className="dashboard-main">
+
+                                        <div className="dashboard-title">
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+
+                                        <div className="dashboard-cards">
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                        </div>
+
+                                        <div className="dashboard-chart">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+
+                                    </div>
+
+                                </div>
 
                             </div>
 
-                            <select
-                                value={category}
-                                onChange={(event) =>
-                                    setCategory(
-                                        event.target.value
-                                    )
-                                }
-                            >
-                                {categories.map(
-                                    (item) => (
-                                        <option
-                                            key={item}
-                                            value={item}
-                                        >
-                                            {item}
-                                        </option>
-                                    )
-                                )}
-                            </select>
+                            {/* FLOATING ELEMENTS */}
+
+                            <div className="register-floating floating-user">
+                                <span>+</span>
+                            </div>
+
+                            <div className="register-floating floating-check">
+                                <span>✓</span>
+                            </div>
+
+                        </div>
+
+                        {/* FOOTER */}
+
+                        <div className="register-visual-footer">
+
+                            <span>
+                                © 2026 SkyShop
+                            </span>
+
+                            <span>
+                                Secure • Simple • Powerful
+                            </span>
 
                         </div>
 
                     </div>
 
-                    {/* ERROR */}
+                </div>
 
-                    {error && (
-                        <div className="dashboard-error">
-                            <span>!</span>
-                            {error}
+                {/* ================= RIGHT FORM ================= */}
+
+                <div className="register-form-side">
+
+                    <div className="register-form-wrapper">
+
+                        {/* MOBILE BRAND */}
+
+                        <div className="register-mobile-brand">
+
+                            <div className="register-logo-mark">
+                                S
+                            </div>
+
+                            <span>
+                                SkyShop
+                            </span>
+
                         </div>
-                    )}
 
-                    {/* LOADING */}
+                        {/* HEADING */}
 
-                    {loading && (
-                        <div className="dashboard-state">
+                        <div className="register-heading">
 
-                            <div className="loading-spinner"></div>
+                            <span className="register-welcome">
+                                GET STARTED
+                            </span>
 
-                            <h3>
-                                Loading products
-                            </h3>
+                            <h2>
+                                Register
+                            </h2>
 
                             <p>
-                                Fetching your inventory...
+                                Create your account to start
+                                managing your products.
                             </p>
 
                         </div>
-                    )}
 
-                    {/* EMPTY */}
+                        {/* FORM */}
 
-                    {!loading &&
-                        products.length === 0 && (
-                            <div className="dashboard-state">
+                        <form
+                            className="register-form"
+                            onSubmit={handleSubmit}
+                        >
 
-                                <div className="empty-icon">
-                                    ▦
+                            {/* NAME */}
+
+                            <div className="register-field">
+
+                                <label htmlFor="name">
+                                    Full name
+                                </label>
+
+                                <div className="register-input-wrapper">
+
+                                    <span className="register-field-icon">
+
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <circle
+                                                cx="12"
+                                                cy="8"
+                                                r="4"
+                                            />
+
+                                            <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+                                        </svg>
+
+                                    </span>
+
+                                    <input
+                                        id="name"
+                                        type="text"
+                                        name="name"
+                                        placeholder="Enter your full name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        autoComplete="name"
+                                        required
+                                    />
+
                                 </div>
 
-                                <h3>
-                                    Your catalog is empty
-                                </h3>
-
-                                <p>
-                                    Add your first product
-                                    to start building your
-                                    inventory.
-                                </p>
-
-                                <button
-                                    onClick={() =>
-                                        navigate(
-                                            "/products/new"
-                                        )
-                                    }
-                                >
-                                    Add Product
-                                </button>
-
                             </div>
-                        )}
 
-                    {/* NO SEARCH RESULTS */}
+                            {/* EMAIL */}
 
-                    {!loading &&
-                        products.length > 0 &&
-                        filteredProducts.length === 0 && (
-                            <div className="dashboard-state">
+                            <div className="register-field">
 
-                                <div className="empty-icon">
-                                    ⌕
+                                <label htmlFor="email">
+                                    Email address
+                                </label>
+
+                                <div className="register-input-wrapper">
+
+                                    <span className="register-field-icon">
+
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M4 6h16v12H4z" />
+                                            <path d="m4 7 8 6 8-6" />
+                                        </svg>
+
+                                    </span>
+
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        placeholder="Enter your email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        autoComplete="email"
+                                        required
+                                    />
+
                                 </div>
 
-                                <h3>
-                                    No products found
-                                </h3>
+                            </div>
 
-                                <p>
-                                    Try another search term
-                                    or category.
-                                </p>
+                            {/* PASSWORD */}
+
+                            <div className="register-field">
+
+                                <label htmlFor="password">
+                                    Password
+                                </label>
+
+                                <div className="register-input-wrapper">
+
+                                    <span className="register-field-icon">
+
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <rect
+                                                x="5"
+                                                y="10"
+                                                width="14"
+                                                height="10"
+                                                rx="2"
+                                            />
+
+                                            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+
+                                        </svg>
+
+                                    </span>
+
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        placeholder="Create a password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        autoComplete="new-password"
+                                        required
+                                    />
+
+                                </div>
 
                             </div>
-                        )}
 
-                    {/* TABLE */}
+                            {/* CONFIRM PASSWORD */}
 
-                    {!loading &&
-                        filteredProducts.length > 0 && (
-                            <div className="table-wrapper">
+                            <div className="register-field">
 
-                                <table className="product-table">
+                                <label htmlFor="confirmPassword">
+                                    Confirm password
+                                </label>
 
-                                    <thead>
-                                        <tr>
-                                            <th>
-                                                PRODUCT
-                                            </th>
+                                <div className="register-input-wrapper">
 
-                                            <th>
-                                                CATEGORY
-                                            </th>
+                                    <span className="register-field-icon">
 
-                                            <th>
-                                                PRICE
-                                            </th>
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <rect
+                                                x="5"
+                                                y="10"
+                                                width="14"
+                                                height="10"
+                                                rx="2"
+                                            />
 
-                                            <th>
-                                                STOCK
-                                            </th>
+                                            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
 
-                                            <th>
-                                                STATUS
-                                            </th>
+                                        </svg>
 
-                                            <th>
-                                                ACTIONS
-                                            </th>
-                                        </tr>
-                                    </thead>
+                                    </span>
 
-                                    <tbody>
+                                    <input
+                                        id="confirmPassword"
+                                        type="password"
+                                        name="confirmPassword"
+                                        placeholder="Confirm your password"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        autoComplete="new-password"
+                                        required
+                                    />
 
-                                        {filteredProducts.map(
-                                            (product) => {
-
-                                                const stockStatus =
-                                                    getStockStatus(
-                                                        Number(
-                                                            product.stock
-                                                        )
-                                                    );
-
-                                                return (
-                                                    <tr
-                                                        key={
-                                                            product._id
-                                                        }
-                                                    >
-
-                                                        <td>
-
-                                                            <div className="product-info">
-
-                                                                <div className="product-thumbnail">
-
-                                                                    {product.image ? (
-                                                                        <img
-                                                                            src={
-                                                                                product.image
-                                                                            }
-                                                                            alt={
-                                                                                product.name
-                                                                            }
-                                                                        />
-                                                                    ) : (
-                                                                        <span>
-                                                                            {product.name
-                                                                                ?.charAt(
-                                                                                    0
-                                                                                )
-                                                                                ?.toUpperCase()}
-                                                                        </span>
-                                                                    )}
-
-                                                                </div>
-
-                                                                <div>
-                                                                    <strong>
-                                                                        {
-                                                                            product.name
-                                                                        }
-                                                                    </strong>
-
-                                                                    <small>
-                                                                        ID:{" "}
-                                                                        {product._id.slice(
-                                                                            -8
-                                                                        )}
-                                                                    </small>
-                                                                </div>
-
-                                                            </div>
-
-                                                        </td>
-
-                                                        <td>
-                                                            <span className="category-tag">
-                                                                {
-                                                                    product.category
-                                                                }
-                                                            </span>
-                                                        </td>
-
-                                                        <td>
-                                                            <strong className="product-price">
-                                                                ₹
-                                                                {Number(
-                                                                    product.price
-                                                                ).toLocaleString(
-                                                                    "en-IN"
-                                                                )}
-                                                            </strong>
-                                                        </td>
-
-                                                        <td>
-                                                            <span className="stock-number">
-                                                                {
-                                                                    product.stock
-                                                                }
-                                                            </span>
-                                                        </td>
-
-                                                        <td>
-                                                            <span
-                                                                className={`stock-status ${stockStatus.className}`}
-                                                            >
-                                                                <i></i>
-                                                                {
-                                                                    stockStatus.label
-                                                                }
-                                                            </span>
-                                                        </td>
-
-                                                        <td>
-
-                                                            <div className="table-actions">
-
-                                                                <button
-                                                                    className="edit-btn"
-                                                                    onClick={() =>
-                                                                        navigate(
-                                                                            `/products/edit/${product._id}`
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Edit
-                                                                </button>
-
-                                                                <button
-                                                                    className="delete-btn"
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            product._id
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Delete
-                                                                </button>
-
-                                                            </div>
-
-                                                        </td>
-
-                                                    </tr>
-                                                );
-                                            }
-                                        )}
-
-                                    </tbody>
-
-                                </table>
+                                </div>
 
                             </div>
-                        )}
 
-                </section>
+                            {/* ERROR */}
 
-                {/* FOOTER */}
+                            {error && (
+                                <div className="register-error">
 
-                <footer className="shop-footer">
+                                    <span>!</span>
 
-                    <span>
-                        © 2026 SkyShop
-                    </span>
+                                    <p>
+                                        {error}
+                                    </p>
 
-                    <span>
-                        Secure • Simple • Powerful
-                    </span>
+                                </div>
+                            )}
 
-                </footer>
+                            {/* BUTTON */}
 
-            </main>
+                            <button
+                                type="submit"
+                                className="register-button"
+                                disabled={loading}
+                            >
 
-        </div>
+                                {loading ? (
+                                    <>
+                                        <span className="register-spinner"></span>
+
+                                        Creating account...
+                                    </>
+                                ) : (
+                                    <>
+                                        Create Account
+
+                                        <span>
+                                            →
+                                        </span>
+                                    </>
+                                )}
+
+                            </button>
+
+                        </form>
+
+                        {/* LOGIN LINK */}
+
+                        <div className="register-login">
+
+                            <span>
+                                Already have an account?
+                            </span>
+
+                            <Link to="/">
+                                Login
+                                <span>→</span>
+                            </Link>
+
+                        </div>
+
+                        {/* SECURITY */}
+
+                        <div className="register-security">
+
+                            <span></span>
+
+                            Your connection is secure
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
     );
 }
 
-export default Products;
+export default Register;
